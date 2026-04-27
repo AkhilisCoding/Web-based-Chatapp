@@ -44,6 +44,8 @@
     white-space:pre-wrap;
     display:inline-block;
     width:fit-content;
+    height:auto !important;
+    box-sizing:border-box;
   }
   .msg-bubble.theirs { background:var(--bg-card); border-bottom-left-radius:4px; }
   .msg-bubble.mine { background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
@@ -87,7 +89,14 @@
   .incoming-call { position:fixed; top:1.5rem; right:1.5rem; z-index:1100; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:1.2rem 1.5rem; min-width:260px; display:none; box-shadow:0 8px 32px rgba(0,0,0,0.5); animation:slideIn 0.3s ease; }
   .incoming-call.active { display:block; }
   @keyframes slideIn { from{transform:translateX(120%)} to{transform:translateX(0)} }
-  @media(max-width:700px) { .sidebar{display:none;} }
+  @media(max-width:700px) {
+    .sidebar{display:none;}
+    .call-btns { display:flex !important; }
+    .call-btn { width:34px; height:34px; font-size:0.9rem; }
+    .messages-area { padding:0.8rem; }
+    .input-area { padding:0.6rem 0.8rem; gap:0.4rem; }
+    .msg-bubble { max-width:78%; font-size:0.85rem; }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -321,20 +330,27 @@ function escHtml(t) {
 }
 
 // ─── File Upload ─────────────────────────────────────────────
+function getCookie(name) {
+  let v = null;
+  document.cookie.split(';').forEach(c => {
+    c = c.trim();
+    if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
+  });
+  return v;
+}
+
 async function uploadFile(input, isVoice=false) {
   if (!input.files || !input.files.length) return;
   const fd = new FormData();
   fd.append('file', input.files[0]);
   fd.append('room_id', ROOM_ID);
-  fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+  fd.append('csrfmiddlewaretoken', getCookie('csrftoken') || CSRF_TOKEN);
   try {
-    const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd });
+    const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
     const data = await res.json();
-    if (data.success) {
-      data.is_voice = isVoice;
-      appendFileMessage(data);
-    }
-  } catch(e) { console.error('Upload failed', e); }
+    if (data.success) { data.is_voice = isVoice; appendFileMessage(data); }
+    else console.error('Upload error:', data);
+  } catch(e) { console.error('Upload failed', e); alert('File upload failed. Please try again.'); }
   input.value = '';
 }
 
@@ -342,9 +358,9 @@ async function uploadBlob(blob, filename) {
   const fd = new FormData();
   fd.append('file', blob, filename);
   fd.append('room_id', ROOM_ID);
-  fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+  fd.append('csrfmiddlewaretoken', getCookie('csrftoken') || CSRF_TOKEN);
   try {
-    const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd });
+    const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
     const data = await res.json();
     if (data.success) { data.is_voice = true; appendFileMessage(data); }
   } catch(e) { console.error('Voice upload failed', e); }

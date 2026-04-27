@@ -1,13 +1,15 @@
 from pathlib import Path
 import os
-import dj_database_url
-from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-SECRET_KEY = config('SECRET_KEY', default='change-me-in-production')
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ['web-based-chatapp.onrender.com']
+SECRET_KEY = 'django-insecure-change-this-in-production-use-env-variable'
+DEBUG = True
+ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
 
 INSTALLED_APPS = [
     'daphne',
@@ -62,10 +64,11 @@ CHANNEL_LAYERS = {
     }
 }
 
-# Database - uses PostgreSQL on Render, SQLite locally
-DATABASE_URL = config('DATABASE_URL', default=f'sqlite:///{BASE_DIR}/db.sqlite3')
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL)
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 LANGUAGE_CODE = 'en-us'
@@ -76,7 +79,6 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -91,19 +93,5 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/chat/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
-# Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER', default='')
-
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 OTP_EXPIRY_MINUTES = 10
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://web-based-chatapp.onrender.com"
-]
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
