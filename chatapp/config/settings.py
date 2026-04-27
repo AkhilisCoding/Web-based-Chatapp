@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='change-me-in-production')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['web-based-chatapp.onrender.com']
 
 INSTALLED_APPS = [
     'daphne',
@@ -101,3 +101,9 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER', default='')
 
 OTP_EXPIRY_MINUTES = 10
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://web-based-chatapp.onrender.com"
+]
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True

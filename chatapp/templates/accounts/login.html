@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+
 {% block title %}Sign In — ChatApp{% endblock %}
+
 {% block extra_css %}
 <style>
   body { display:flex; align-items:center; justify-content:center; background: radial-gradient(ellipse at 70% 60%, rgba(108,99,255,0.08) 0%, transparent 60%), var(--bg-primary); overflow:auto; }
@@ -10,13 +12,21 @@
   label { color:var(--text-secondary); font-size:0.85rem; margin-bottom:4px; }
 </style>
 {% endblock %}
+
 {% block content %}
 <div class="auth-card">
   <div class="text-center mb-4">
     <div class="brand">chat<span>app</span></div>
     <p class="mt-2" style="color:var(--text-secondary);font-size:0.9rem;">Welcome back</p>
   </div>
-  {% crispy form %}
+
+  <!-- ✅ FIX STARTS HERE -->
+  <form method="POST">
+    {% csrf_token %}
+    {% crispy form %}
+  </form>
+  <!-- ✅ FIX ENDS HERE -->
+
   <p class="text-center mt-3" style="color:var(--text-secondary);font-size:0.85rem;">
     No account? <a href="{% url 'accounts:register' %}" style="color:var(--accent);">Create one</a>
   </p>
