@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Find People — ChatApp{% endblock %}
+{% block extra_css %}
+<style>
+  html, body { overflow: auto; }
+  .search-page { max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+  .search-box { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:0.75rem 1.2rem; display:flex; align-items:center; gap:0.8rem; margin-bottom:1.5rem; }
+  .search-box input { flex:1; background:none; border:none; outline:none; color:var(--text-primary); font-size:0.95rem; }
+  .search-box input::placeholder { color:var(--text-secondary); }
+  .user-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem 1.2rem; display:flex; align-items:center; gap:1rem; margin-bottom:0.8rem; text-decoration:none; color:inherit; transition:background 0.15s, border-color 0.15s; }
+  .user-card:hover { background:var(--bg-hover); border-color:var(--accent); }
+  .user-card img { width:50px; height:50px; border-radius:50%; object-fit:cover; }
+  .start-btn { margin-left:auto; background:var(--accent); color:#fff; border:none; border-radius:10px; padding:0.4rem 1rem; font-size:0.82rem; cursor:pointer; font-weight:500; }
+  .start-btn:hover { background:var(--accent-soft); }
+  .empty { text-align:center; color:var(--text-secondary); padding:3rem 0; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="search-page">
+  <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+    <a href="{% url 'chat:home' %}" style="color:var(--text-secondary);"><i class="bi bi-arrow-left fs-5"></i></a>
+    <h5 style="margin:0;font-weight:600;">Find People</h5>
+  </div>
+  <form method="get">
+    <div class="search-box">
+      <i class="bi bi-search" style="color:var(--text-secondary);"></i>
+      <input type="text" name="q" value="{{ query }}" placeholder="Search by username or email..." autofocus>
+      <button type="submit" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.85rem;font-weight:500;">Search</button>
+    </div>
+  </form>
+  {% if query %}
+    {% if users %}
+      {% for user in users %}
+      <div class="user-card">
+        <div style="position:relative;">
+          <img src="{{ user.get_avatar_url }}" alt="{{ user.username }}">
+          {% if user.is_online %}<span class="online-dot" style="position:absolute;bottom:0;right:0;border:2px solid var(--bg-card);"></span>{% endif %}
+        </div>
+        <div>
+          <div style="font-weight:500;">{{ user.username }}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">{{ user.bio|default:"No bio yet." }}</div>
+        </div>
+        <a href="{% url 'chat:start_chat' user.id %}" class="start-btn">Message</a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><i class="bi bi-search" style="font-size:2.5rem;opacity:0.3;"></i><p class="mt-2">No users found for "{{ query }}"</p></div>
+    {% endif %}
+  {% else %}
+    <div class="empty"><i class="bi bi-people" style="font-size:2.5rem;opacity:0.3;"></i><p class="mt-2">Search for someone to start a conversation</p></div>
+  {% endif %}
+</div>
+{% endblock %}

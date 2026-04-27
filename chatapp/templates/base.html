@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ChatApp{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --bg-primary: #0d0f14;
+            --bg-secondary: #141720;
+            --bg-card: #1a1e2e;
+            --bg-hover: #1f2436;
+            --accent: #6c63ff;
+            --accent-soft: #8b85ff;
+            --accent-glow: rgba(108, 99, 255, 0.15);
+            --green: #00e676;
+            --red: #ff5252;
+            --text-primary: #e8eaf0;
+            --text-secondary: #7c8099;
+            --border: rgba(255,255,255,0.06);
+            --font-main: 'DM Sans', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: var(--font-main);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        /* Form controls */
+        .form-control, .form-select {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--text-primary) !important;
+            border-radius: 10px !important;
+            padding: 0.65rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 3px var(--accent-glow) !important;
+        }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            border-radius: 10px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: var(--accent-soft);
+            border-color: var(--accent-soft);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        /* Alerts */
+        .alert { border-radius: 10px; border: none; }
+        /* Online dot */
+        .online-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            display: inline-block;
+        }
+        .offline-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--text-secondary);
+            display: inline-block;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if messages %}
+<div style="position:fixed;top:1rem;right:1rem;z-index:9999;min-width:280px;">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% block content %}{% endblock %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Chats — ChatApp{% endblock %}
+{% block extra_css %}
+<style>
+  html, body { overflow: hidden; }
+  .app { display:flex; height:100vh; }
+  .sidebar {
+    width:320px; min-width:280px; background:var(--bg-secondary);
+    border-right:1px solid var(--border); display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .sidebar-header {
+    padding:1.2rem 1.2rem 0.8rem; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .brand { font-family:var(--font-mono); color:var(--accent); font-weight:700; font-size:1.1rem; }
+  .chat-list { flex:1; overflow-y:auto; padding:0.5rem 0; }
+  .chat-item {
+    display:flex; align-items:center; gap:0.75rem;
+    padding:0.8rem 1.2rem; cursor:pointer; transition:background 0.15s;
+    text-decoration:none; color:inherit; border-left:3px solid transparent;
+  }
+  .chat-item:hover { background:var(--bg-hover); color:inherit; }
+  .chat-item.active { background:var(--accent-glow); border-left-color:var(--accent); }
+  .avatar {
+    width:46px; height:46px; border-radius:50%;
+    object-fit:cover; flex-shrink:0; border:2px solid var(--border);
+  }
+  .chat-info { flex:1; min-width:0; }
+  .chat-name { font-weight:500; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chat-preview { font-size:0.78rem; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .unread-badge { background:var(--accent); color:#fff; border-radius:50%; width:20px; height:20px; font-size:0.7rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .main-area { flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg-primary); }
+  .empty-state { text-align:center; color:var(--text-secondary); }
+  .empty-state .icon { font-size:4rem; margin-bottom:1rem; opacity:0.3; }
+  .search-bar { padding:0.8rem 1.2rem; }
+  .search-bar input { background:var(--bg-card); border:1px solid var(--border); color:var(--text-primary); border-radius:10px; padding:0.5rem 0.8rem; width:100%; outline:none; font-size:0.85rem; }
+  .search-bar input:focus { border-color:var(--accent); }
+  .sidebar-footer { padding:0.8rem 1.2rem; border-top:1px solid var(--border); display:flex; align-items:center; gap:0.6rem; }
+  .my-avatar { width:34px; height:34px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); }
+  .btn-icon { background:none; border:none; color:var(--text-secondary); padding:0.3rem; border-radius:8px; cursor:pointer; transition:all 0.15s; }
+  .btn-icon:hover { background:var(--bg-hover); color:var(--text-primary); }
+  @media(max-width:600px) { .sidebar { width:100%; } .main-area { display:none; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="brand">chatapp</span>
+      <a href="{% url 'chat:search' %}" class="btn-icon" title="New Chat"><i class="bi bi-pencil-square fs-5"></i></a>
+    </div>
+    <div class="search-bar">
+      <input type="text" placeholder="Search or start new chat..." id="sidebarSearch" onkeyup="filterChats(this.value)">
+    </div>
+    <div class="chat-list" id="chatList">
+      {% if rooms %}
+        {% for item in rooms %}
+        <a href="{% url 'chat:room' item.room.id %}" class="chat-item">
+          <div style="position:relative;">
+            <img src="{{ item.other_user.get_avatar_url }}" class="avatar" alt="{{ item.other_user.username }}">
+            {% if item.other_user.is_online %}
+            <span class="online-dot" style="position:absolute;bottom:0;right:0;border:2px solid var(--bg-secondary);"></span>
+            {% endif %}
+          </div>
+          <div class="chat-info">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="chat-name">{{ item.other_user.username }}</span>
+              {% if item.last_message %}
+              <span style="font-size:0.7rem;color:var(--text-secondary);">{{ item.last_message.timestamp|time:"H:i" }}</span>
+              {% endif %}
+            </div>
+            <div class="chat-preview">
+              {% if item.last_message %}
+                {% if item.last_message.message_type == 'image' %}📷 Photo{% elif item.last_message.message_type == 'file' %}📎 {{ item.last_message.content }}{% else %}{{ item.last_message.content }}{% endif %}
+              {% else %}Start a conversation{% endif %}
+            </div>
+          </div>
+          {% if item.unread_count %}<span class="unread-badge">{{ item.unread_count }}</span>{% endif %}
+        </a>
+        {% endfor %}
+      {% else %}
+        <div style="text-align:center;padding:3rem 1rem;color:var(--text-secondary);">
+          <div style="font-size:2.5rem;opacity:0.3;">💬</div>
+          <p style="margin-top:0.8rem;font-size:0.85rem;">No conversations yet.<br><a href="{% url 'chat:search' %}" style="color:var(--accent);">Find someone to chat with</a></p>
+        </div>
+      {% endif %}
+    </div>
+    <div class="sidebar-footer">
+      <img src="{{ request.user.get_avatar_url }}" class="my-avatar">
+      <span style="flex:1;font-size:0.85rem;font-weight:500;">{{ request.user.username }}</span>
+      <a href="{% url 'accounts:profile' %}" class="btn-icon" title="Profile"><i class="bi bi-person-circle fs-5"></i></a>
+      <a href="{% url 'accounts:logout' %}" class="btn-icon" title="Logout"><i class="bi bi-box-arrow-right fs-5"></i></a>
+    </div>
+  </div>
+  <div class="main-area">
+    <div class="empty-state">
+      <div class="icon">💬</div>
+      <h5 style="color:var(--text-primary);font-weight:500;">Select a conversation</h5>
+      <p style="font-size:0.85rem;">or <a href="{% url 'chat:search' %}" style="color:var(--accent);">start a new one</a></p>
+    </div>
+  </div>
+</div>
+<script>
+function filterChats(q) {
+  document.querySelectorAll('#chatList .chat-item').forEach(el => {
+    const name = el.querySelector('.chat-name').textContent.toLowerCase();
+    el.style.display = name.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

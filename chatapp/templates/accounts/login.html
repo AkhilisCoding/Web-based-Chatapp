@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Sign In — ChatApp{% endblock %}
+{% block extra_css %}
+<style>
+  body { display:flex; align-items:center; justify-content:center; background: radial-gradient(ellipse at 70% 60%, rgba(108,99,255,0.08) 0%, transparent 60%), var(--bg-primary); overflow:auto; }
+  .auth-card { width:100%; max-width:400px; background:var(--bg-card); border-radius:20px; padding:2.5rem; border:1px solid var(--border); box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+  .brand { font-family:var(--font-mono); color:var(--accent); font-size:1.5rem; font-weight:700; letter-spacing:-1px; }
+  .brand span { color:var(--text-primary); }
+  label { color:var(--text-secondary); font-size:0.85rem; margin-bottom:4px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <div class="text-center mb-4">
+    <div class="brand">chat<span>app</span></div>
+    <p class="mt-2" style="color:var(--text-secondary);font-size:0.9rem;">Welcome back</p>
+  </div>
+  {% crispy form %}
+  <p class="text-center mt-3" style="color:var(--text-secondary);font-size:0.85rem;">
+    No account? <a href="{% url 'accounts:register' %}" style="color:var(--accent);">Create one</a>
+  </p>
+</div>
+{% endblock %}
