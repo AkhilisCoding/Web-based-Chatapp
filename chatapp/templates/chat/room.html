@@ -21,8 +21,8 @@
   .btn-icon:hover { background:var(--bg-hover); color:var(--text-primary); }
   /* ---- CHAT MAIN ---- */
   .chat-main { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg-primary); }
-  .chat-header { padding:0.9rem 1.5rem; border-bottom:1px solid var(--border); background:var(--bg-secondary); display:flex; align-items:center; gap:1rem; }
-  .chat-header .avatar { width:42px; height:42px; border-radius:50%; object-fit:cover; }
+  .chat-header { padding:0.7rem 1rem; border-bottom:1px solid var(--border); background:var(--bg-secondary); display:flex; align-items:center; gap:0.8rem; flex-wrap:nowrap; }
+  .chat-header .avatar { width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0; }
   .header-info { flex:1; }
   .header-name { font-weight:600; font-size:0.95rem; }
   .header-status { font-size:0.75rem; color:var(--text-secondary); }
@@ -91,11 +91,15 @@
   @keyframes slideIn { from{transform:translateX(120%)} to{transform:translateX(0)} }
   @media(max-width:700px) {
     .sidebar{display:none;}
-    .call-btns { display:flex !important; }
-    .call-btn { width:34px; height:34px; font-size:0.9rem; }
+    .chat-header { padding:0.6rem 0.8rem; gap:0.6rem; }
+    .call-btns { display:flex !important; gap:0.4rem; flex-shrink:0; }
+    .call-btn { width:32px; height:32px; font-size:0.85rem; }
+    .header-name { font-size:0.88rem; }
+    .header-status { font-size:0.7rem; }
     .messages-area { padding:0.8rem; }
     .input-area { padding:0.6rem 0.8rem; gap:0.4rem; }
     .msg-bubble { max-width:78%; font-size:0.85rem; }
+    .msg-image { max-width:180px; }
   }
 </style>
 {% endblock %}
@@ -275,10 +279,32 @@ function appendMessage(data) {
   const isMine = data.sender_id === USER_ID;
   const div = document.createElement('div');
   div.className = `msg-row${isMine ? ' mine' : ''}`;
+
+  // Check if it's a file message broadcast
+  const msg = data.message || '';
+  let bubbleContent = '';
+  if (msg.startsWith('__file__')) {
+    const parts = msg.split('__');
+    // parts: ['', 'file', msgType, fileUrl, fileName, voiceFlag]
+    const msgType = parts[2];
+    const fileUrl = parts[3];
+    const fileName = parts[4];
+    const isVoice = parts[5] === 'voice';
+    if (msgType === 'image') {
+      bubbleContent = `<img src="${fileUrl}" class="msg-image" onclick="window.open(this.src)" alt="Image">`;
+    } else if (isVoice) {
+      bubbleContent = `<div class="voice-bubble"><i class="bi bi-mic-fill"></i><audio controls src="${fileUrl}"></audio></div>`;
+    } else {
+      bubbleContent = `<a href="${fileUrl}" class="msg-file-link" download><i class="bi bi-paperclip"></i> ${escHtml(fileName)}</a>`;
+    }
+  } else {
+    bubbleContent = escHtml(msg);
+  }
+
   div.innerHTML = `
     ${!isMine ? `<img src="${data.sender_avatar}" class="msg-avatar" alt="">` : ''}
     <div>
-      <div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">${escHtml(data.message)}</div>
+      <div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">${bubbleContent}</div>
       <div class="msg-time">${data.timestamp}</div>
     </div>`;
   area.insertBefore(div, document.getElementById('typingRow'));
@@ -348,8 +374,17 @@ async function uploadFile(input, isVoice=false) {
   try {
     const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
     const data = await res.json();
-    if (data.success) { data.is_voice = isVoice; appendFileMessage(data); }
-    else console.error('Upload error:', data);
+    if (data.success) {
+      data.is_voice = isVoice;
+      appendFileMessage(data);
+      // Broadcast to other user via WebSocket
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          type: 'chat_message',
+          message: `__file__${data.message_type}__${data.file_url}__${data.file_name}__${data.is_voice ? 'voice' : 'file'}`
+        }));
+      }
+    } else console.error('Upload error:', data);
   } catch(e) { console.error('Upload failed', e); alert('File upload failed. Please try again.'); }
   input.value = '';
 }
@@ -362,7 +397,16 @@ async function uploadBlob(blob, filename) {
   try {
     const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
     const data = await res.json();
-    if (data.success) { data.is_voice = true; appendFileMessage(data); }
+    if (data.success) {
+      data.is_voice = true;
+      appendFileMessage(data);
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          type: 'chat_message',
+          message: `__file__${data.message_type}__${data.file_url}__${data.file_name}__voice`
+        }));
+      }
+    }
   } catch(e) { console.error('Voice upload failed', e); }
 }
 
