@@ -26,11 +26,30 @@
   .header-info { flex:1; }
   .header-name { font-weight:600; font-size:0.95rem; }
   .header-status { font-size:0.75rem; color:var(--text-secondary); }
-  .call-btns { display:flex; gap:0.5rem; }
+  .call-btns { display:flex; gap:0.5rem; flex-shrink:0; }
   .call-btn { width:38px; height:38px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; font-size:1rem; }
   .call-btn.video { background:var(--accent-glow); color:var(--accent); }
   .call-btn.audio { background:rgba(0,230,118,0.12); color:var(--green); }
   .call-btn:hover { transform:scale(1.1); }
+  /* Mobile floating call buttons - always visible */
+  .mobile-call-bar {
+    display:none;
+    position:fixed;
+    bottom:80px;
+    right:14px;
+    flex-direction:column;
+    gap:10px;
+    z-index:600;
+  }
+  .mobile-call-fab {
+    width:50px; height:50px; border-radius:50%; border:none;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:1.1rem;
+    box-shadow:0 4px 20px rgba(0,0,0,0.5);
+    transition:transform 0.2s;
+  }
+  .mobile-call-fab.video { background:var(--accent); color:#fff; }
+  .mobile-call-fab.audio { background:#0d2b1a; color:var(--green); border:2px solid rgba(0,230,118,0.4); }
   /* ---- MESSAGES ---- */
   .messages-area { flex:1; overflow-y:auto; padding:1.2rem 1.5rem; display:flex; flex-direction:column; gap:0.6rem; }
   .msg-row { display:flex; align-items:flex-end; gap:0.5rem; }
@@ -90,15 +109,15 @@
   .incoming-call.active { display:block; }
   @keyframes slideIn { from{transform:translateX(120%)} to{transform:translateX(0)} }
   @media(max-width:700px) {
-    .sidebar{display:none;}
+    .sidebar { display:none; }
+    .call-btns { display:none !important; }
+    .mobile-call-bar { display:flex !important; }
     .chat-header { padding:0.6rem 0.8rem; gap:0.6rem; }
-    .call-btns { display:flex !important; gap:0.4rem; flex-shrink:0; }
-    .call-btn { width:32px; height:32px; font-size:0.85rem; }
     .header-name { font-size:0.88rem; }
     .header-status { font-size:0.7rem; }
-    .messages-area { padding:0.8rem; }
-    .input-area { padding:0.6rem 0.8rem; gap:0.4rem; }
-    .msg-bubble { max-width:78%; font-size:0.85rem; }
+    .messages-area { padding:0.8rem; padding-bottom:0.5rem; }
+    .input-area { padding:0.5rem 0.8rem; gap:0.4rem; }
+    .msg-bubble { max-width:80%; font-size:0.85rem; }
     .msg-image { max-width:180px; }
   }
 </style>
@@ -196,6 +215,16 @@
       <button class="send-btn" onclick="sendMessage()"><i class="bi bi-send-fill" style="transform:rotate(-10deg);"></i></button>
     </div>
   </div>
+</div>
+
+<!-- Mobile Floating Call Buttons -->
+<div class="mobile-call-bar">
+  <button class="mobile-call-fab video" onclick="startCall('video')" title="Video Call">
+    <i class="bi bi-camera-video-fill"></i>
+  </button>
+  <button class="mobile-call-fab audio" onclick="startCall('audio')" title="Voice Call">
+    <i class="bi bi-telephone-fill"></i>
+  </button>
 </div>
 
 <!-- Incoming Call -->
