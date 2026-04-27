@@ -174,6 +174,7 @@
 
     <div class="messages-area" id="messagesArea">
       {% for msg in messages %}
+      {% if not msg.content|slice:":8" == "__file__" %}
       <div class="msg-row {% if msg.sender == request.user %}mine{% endif %}">
         {% if msg.sender != request.user %}<img src="{{ msg.sender.get_avatar_url }}" class="msg-avatar" alt="">{% endif %}
         <div>
@@ -193,6 +194,7 @@
           <div class="msg-time">{{ msg.timestamp|time:"H:i" }}</div>
         </div>
       </div>
+      {% endif %}
       {% endfor %}
       <div class="msg-row" id="typingRow" style="display:none;">
         <img src="{{ other_user.get_avatar_url }}" class="msg-avatar" alt="">
@@ -404,13 +406,12 @@ async function uploadFile(input, isVoice=false) {
     const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
     const data = await res.json();
     if (data.success) {
-      data.is_voice = isVoice;
-      appendFileMessage(data);
-      // Broadcast to other user via WebSocket
+      // Only broadcast via WebSocket — don't appendFileMessage here
+      // The WebSocket echo will render it for sender too
       if (socket && socket.readyState === 1) {
         socket.send(JSON.stringify({
           type: 'chat_message',
-          message: `__file__${data.message_type}__${data.file_url}__${data.file_name}__${data.is_voice ? 'voice' : 'file'}`
+          message: `__file__${data.message_type}__${data.file_url}__${data.file_name}__${isVoice ? 'voice' : 'file'}`
         }));
       }
     } else console.error('Upload error:', data);
@@ -427,8 +428,6 @@ async function uploadBlob(blob, filename) {
     const res = await fetch(UPLOAD_URL, { method: 'POST', body: fd, credentials: 'same-origin' });
     const data = await res.json();
     if (data.success) {
-      data.is_voice = true;
-      appendFileMessage(data);
       if (socket && socket.readyState === 1) {
         socket.send(JSON.stringify({
           type: 'chat_message',
