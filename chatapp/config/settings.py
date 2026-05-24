@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-change-this-in-production-use-env-variable'
@@ -64,11 +65,10 @@ CHANNEL_LAYERS = {
     }
 }
 
+# Database - uses PostgreSQL on Render, SQLite locally
+DATABASE_URL = os.environ.get('DATABASE_URL', f'sqlite:///{BASE_DIR}/db.sqlite3')
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
 }
 
 LANGUAGE_CODE = 'en-us'
@@ -98,6 +98,6 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'akhilbhattacharjee23@gmail.com'
-EMAIL_HOST_PASSWORD = 'oltm nyli lzfk hsww'  
+EMAIL_HOST_PASSWORD = 'oltm nyli lzfk hsww'
 DEFAULT_FROM_EMAIL = 'akhilbhattacharjee23@gmail.com'
 OTP_EXPIRY_MINUTES = 10
