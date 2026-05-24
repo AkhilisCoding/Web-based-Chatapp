@@ -4,8 +4,19 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 from .forms import RegisterForm, LoginForm, OTPForm, ProfileForm
 from .models import User
+
+def send_otp_email(subject, message, recipient):
+    """Send OTP email, log it if sending fails."""
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=False)
+        logger.info(f"OTP email sent to {recipient}")
+    except Exception as e:
+        logger.warning(f"Email failed ({e}). OTP message: {message}")
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -18,15 +29,12 @@ def register_view(request):
             user.save()
             otp = user.generate_otp()
             request.session['otp_user_id'] = user.id
-            # Send OTP via email
-            send_mail(
+            send_otp_email(
                 'Your ChatApp Verification Code',
                 f'Your OTP is: {otp}\n\nThis code expires in 10 minutes.',
-                settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@chatapp.com',
-                [user.email],
-                fail_silently=False,
+                user.email,
             )
-            messages.success(request, f'Account created! Check your email (or console) for the OTP.')
+            messages.success(request, 'Account created! Check your email for the OTP. If email fails, check Render logs.')
             return redirect('accounts:verify_otp')
     else:
         form = RegisterForm()
@@ -65,12 +73,10 @@ def resend_otp_view(request):
         try:
             user = User.objects.get(id=user_id)
             otp = user.generate_otp()
-            send_mail(
+            send_otp_email(
                 'Your ChatApp Verification Code',
                 f'Your new OTP is: {otp}',
-                'noreply@chatapp.com',
-                [user.email],
-                fail_silently=False,
+                user.email,
             )
             messages.success(request, 'New OTP sent!')
         except User.DoesNotExist:
@@ -87,7 +93,7 @@ def login_view(request):
             if not user.is_verified:
                 request.session['otp_user_id'] = user.id
                 otp = user.generate_otp()
-                send_mail('Your ChatApp OTP', f'Your OTP: {otp}', 'noreply@chatapp.com', [user.email], fail_silently=False)
+                send_otp_email('Your ChatApp OTP', f'Your OTP: {otp}', user.email)
                 messages.warning(request, 'Please verify your email first.')
                 return redirect('accounts:verify_otp')
             login(request, user)
