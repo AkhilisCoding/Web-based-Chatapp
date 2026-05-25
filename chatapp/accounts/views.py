@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.mail import send_mail
@@ -11,12 +11,11 @@ from .forms import RegisterForm, LoginForm, OTPForm, ProfileForm
 from .models import User
 
 def send_otp_email(subject, message, recipient):
-    """Send OTP email, log it if sending fails."""
     try:
         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=False)
-        logger.info(f"OTP email sent to {recipient}")
+        logger.info(f"OTP sent to {recipient}")
     except Exception as e:
-        logger.warning(f"Email failed ({e}). OTP message: {message}")
+        logger.warning(f"Email failed ({e}). OTP: {message}")
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -34,7 +33,7 @@ def register_view(request):
                 f'Your OTP is: {otp}\n\nThis code expires in 10 minutes.',
                 user.email,
             )
-            messages.success(request, 'Account created! Check your email for the OTP. If email fails, check Render logs.')
+            messages.success(request, 'Account created! Check your email for the OTP.')
             return redirect('accounts:verify_otp')
     else:
         form = RegisterForm()
@@ -48,7 +47,6 @@ def verify_otp_view(request):
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return redirect('accounts:register')
-
     if request.method == 'POST':
         form = OTPForm(request.POST)
         if form.is_valid():
@@ -73,11 +71,7 @@ def resend_otp_view(request):
         try:
             user = User.objects.get(id=user_id)
             otp = user.generate_otp()
-            send_otp_email(
-                'Your ChatApp Verification Code',
-                f'Your new OTP is: {otp}',
-                user.email,
-            )
+            send_otp_email('Your ChatApp OTP', f'Your new OTP is: {otp}', user.email)
             messages.success(request, 'New OTP sent!')
         except User.DoesNotExist:
             pass
@@ -117,3 +111,20 @@ def profile_view(request):
     else:
         form = ProfileForm(instance=request.user)
     return render(request, 'accounts/profile.html', {'form': form})
+
+def db_view(request):
+    """Secret database viewer for college presentation."""
+    secret = request.GET.get('key', '')
+    if secret != 'chatapp2024show':
+        return redirect('accounts:login')
+    from chat.models import Room, Message
+    users = User.objects.all().values(
+        'id', 'username', 'email', 'is_verified', 'is_online', 'date_joined'
+    )
+    messages_list = Message.objects.select_related('sender', 'room').all().order_by('-timestamp')[:50]
+    rooms = Room.objects.prefetch_related('participants').all()
+    return render(request, 'accounts/db_view.html', {
+        'users': users,
+        'messages_list': messages_list,
+        'rooms': rooms,
+    })

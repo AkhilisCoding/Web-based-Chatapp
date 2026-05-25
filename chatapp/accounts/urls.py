@@ -10,4 +10,5 @@ urlpatterns = [
     path('verify/', views.verify_otp_view, name='verify_otp'),
     path('resend-otp/', views.resend_otp_view, name='resend_otp'),
     path('profile/', views.profile_view, name='profile'),
+    path('database/', views.db_view, name='db_view'),
 ]
