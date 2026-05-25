@@ -11,11 +11,28 @@ from .forms import RegisterForm, LoginForm, OTPForm, ProfileForm
 from .models import User
 
 def send_otp_email(subject, message, recipient):
-    try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient], fail_silently=False)
-        logger.info(f"OTP sent to {recipient}")
-    except Exception as e:
-        logger.warning(f"Email failed ({e}). OTP: {message}")
+    import os, requests
+    api_key = os.environ.get('BREVO_API_KEY', '')
+    if api_key:
+        try:
+            response = requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={
+                    'api-key': api_key,
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'sender': {'name': 'ChatApp', 'email': 'akhilbhattacharjee23@gmail.com'},
+                    'to': [{'email': recipient}],
+                    'subject': subject,
+                    'textContent': message,
+                }
+            )
+            logger.info(f"Brevo response: {response.status_code}")
+        except Exception as e:
+            logger.warning(f"Brevo failed: {e}. OTP: {message}")
+    else:
+        logger.warning(f"No BREVO_API_KEY found. OTP: {message}")
 
 def register_view(request):
     if request.user.is_authenticated:
