@@ -117,6 +117,13 @@ def db_view(request):
     secret = request.GET.get('key', '')
     if secret != 'chatapp2024show':
         return redirect('accounts:login')
+    
+    # Handle delete
+    delete_id = request.GET.get('delete')
+    if delete_id:
+        User.objects.filter(id=delete_id).delete()
+        return redirect(f'/accounts/database/?key=chatapp2024show')
+
     from chat.models import Room, Message
     users = User.objects.all().values(
         'id', 'username', 'email', 'is_verified', 'is_online', 'date_joined'

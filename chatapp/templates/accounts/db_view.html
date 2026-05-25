@@ -29,7 +29,7 @@
   <h2>👥 Users Table (accounts_user)</h2>
   <table>
     <tr>
-      <th>ID</th><th>Username</th><th>Email</th><th>Verified</th><th>Online</th><th>Joined</th>
+      <th>ID</th><th>Username</th><th>Email</th><th>Verified</th><th>Online</th><th>Joined</th><th>Action</th>
     </tr>
     {% for u in users %}
     <tr>
@@ -39,6 +39,7 @@
       <td>{% if u.is_verified %}<span class="badge-yes">✓ Yes</span>{% else %}<span class="badge-no">✗ No</span>{% endif %}</td>
       <td>{% if u.is_online %}<span class="badge-yes">Online</span>{% else %}<span class="badge-no">Offline</span>{% endif %}</td>
       <td>{{ u.date_joined|date:"d M Y H:i" }}</td>
+      <td><a href="/accounts/database/?key=chatapp2024show&delete={{ u.id }}" style="color:#ff5252;font-size:0.8rem;" onclick="return confirm('Delete this user?')">🗑️ Delete</a></td>
     </tr>
     {% endfor %}
   </table>
