@@ -25,3 +25,4 @@ service-identity>=18.1
 cryptography>=3.4
 txaio>=21.2
 cffi>=1.0
+requests>=2.28
