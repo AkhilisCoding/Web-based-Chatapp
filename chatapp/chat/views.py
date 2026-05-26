@@ -68,19 +68,43 @@ def upload_file_view(request):
             return JsonResponse({'error': 'Unauthorized'}, status=403)
         
         file = request.FILES['file']
-        msg_type = 'image' if file.content_type.startswith('image/') else 'file'
+        content_type = file.content_type
         
+        if content_type.startswith('image/'):
+            msg_type = 'image'
+        else:
+            msg_type = 'file'
+
+        # Upload directly to Cloudinary with correct resource type
+        import cloudinary.uploader
+        if content_type.startswith('image/'):
+            resource_type = 'image'
+        elif content_type.startswith('video/') or content_type.startswith('audio/'):
+            resource_type = 'video'
+        else:
+            resource_type = 'raw'
+
+        result = cloudinary.uploader.upload(
+            file,
+            resource_type=resource_type,
+            folder='chat_files',
+        )
+        file_url = result['secure_url']
+
         message = Message.objects.create(
             room=room,
             sender=request.user,
             content=file.name,
             message_type=msg_type,
-            file=file,
+            file=file.name,
         )
+        # Update file field with Cloudinary URL
+        Message.objects.filter(id=message.id).update(file=result['public_id'])
+
         return JsonResponse({
             'success': True,
             'message_id': message.id,
-            'file_url': message.file.url,
+            'file_url': file_url,
             'file_name': file.name,
             'message_type': msg_type,
             'sender_username': request.user.username,
