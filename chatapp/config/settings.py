@@ -100,5 +100,5 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = 'akhilbhattacharjee23@gmail.com'
+DEFAULT_FROM_EMAIL = 'ankushbhattacharjee91@gmail.com'
 OTP_EXPIRY_MINUTES = 10

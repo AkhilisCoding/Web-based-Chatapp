@@ -22,7 +22,7 @@ def send_otp_email(subject, message, recipient):
                     'Content-Type': 'application/json',
                 },
                 json={
-                    'sender': {'name': 'ChatApp', 'email': 'akhilbhattacharjee23@gmail.com'},
+                    'sender': {'name': 'ChatApp', 'email': 'ankushbhattacharjee91@gmail.com'},
                     'to': [{'email': recipient}],
                     'subject': subject,
                     'textContent': message,
