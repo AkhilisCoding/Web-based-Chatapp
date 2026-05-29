@@ -132,19 +132,19 @@
       <a href="{% url 'chat:search' %}" class="btn-icon"><i class="bi bi-pencil-square"></i></a>
     </div>
     <div class="chat-list">
-      {% for item in request.user.rooms.all %}
-      {% with other=item.get_other_user|default:request.user %}
-      <a href="{% url 'chat:room' item.id %}" class="chat-item {% if item.id == room.id %}active{% endif %}">
+      {% for item in sidebar_rooms %}
+      {% if item.other %}
+      <a href="{% url 'chat:room' item.room.id %}" class="chat-item {% if item.room.id == room.id %}active{% endif %}">
         <div style="position:relative;">
-          <img src="{{ other.get_avatar_url }}" class="s-avatar" alt="">
-          {% if other.is_online %}<span class="online-dot" style="position:absolute;bottom:0;right:0;border:2px solid var(--bg-secondary);"></span>{% endif %}
+          <img src="{{ item.other.get_avatar_url }}" class="s-avatar" alt="">
+          {% if item.other.is_online %}<span class="online-dot" style="position:absolute;bottom:0;right:0;border:2px solid var(--bg-secondary);"></span>{% endif %}
         </div>
         <div style="flex:1;min-width:0;">
-          <div class="s-name">{{ other.username }}</div>
-          <div class="s-preview">{% with lm=item.get_last_message %}{% if lm %}{{ lm.content|truncatechars:25 }}{% else %}Say hello!{% endif %}{% endwith %}</div>
+          <div class="s-name">{{ item.other.username }}</div>
+          <div class="s-preview">{% with lm=item.room.get_last_message %}{% if lm %}{{ lm.content|truncatechars:25 }}{% else %}Say hello!{% endif %}{% endwith %}</div>
         </div>
       </a>
-      {% endwith %}
+      {% endif %}
       {% endfor %}
     </div>
     <div class="sidebar-footer">

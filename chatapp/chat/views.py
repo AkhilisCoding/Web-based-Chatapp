@@ -31,10 +31,18 @@ def room_view(request, room_id):
     messages = room.messages.select_related('sender').all()
     # Mark messages as read
     room.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+    
+    # ADD THIS 👇
+    sidebar_rooms = [
+        {'room': r, 'other': r.get_other_user(request.user)}
+        for r in request.user.rooms.prefetch_related('participants').all()
+    ]
+    
     return render(request, 'chat/room.html', {
         'room': room,
         'other_user': other_user,
         'messages': messages,
+        'sidebar_rooms': sidebar_rooms,  # ADD THIS TOO 
     })
 
 @login_required
