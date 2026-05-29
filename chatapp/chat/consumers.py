@@ -18,7 +18,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
         await self.set_user_online(True)
 
-        # Notify others user is online
         await self.channel_layer.group_send(self.room_group_name, {
             'type': 'user_status',
             'user_id': self.user.id,
@@ -54,8 +53,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'timestamp': message.timestamp.strftime('%H:%M'),
             })
 
+            # 👇 notify the other user's home page
+            other_user_id = await self.get_other_user_id()
+            if other_user_id:
+                await self.channel_layer.group_send(
+                    f'user_{other_user_id}_notifications',
+                    {
+                        'type': 'new_message_notification',
+                        'room_id': int(self.room_id),
+                        'sender_username': self.user.username,
+                        'sender_avatar': self.user.get_avatar_url(),
+                        'message': content,
+                        'timestamp': message.timestamp.strftime('%H:%M'),
+                    }
+                )
+
         elif msg_type in ('call_offer', 'call_answer', 'ice_candidate', 'call_end', 'call_rejected'):
-            # WebRTC signaling - relay to room
             await self.channel_layer.group_send(self.room_group_name, {
                 'type': 'webrtc_signal',
                 'signal_type': msg_type,
@@ -106,9 +119,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room = Room.objects.get(id=self.room_id)
         Message.objects.filter(room=room, is_read=False).exclude(sender=self.user).update(is_read=True)
 
+    @database_sync_to_async
+    def get_other_user_id(self):
+        from .models import Room
+        room = Room.objects.get(id=self.room_id)
+        other = room.participants.exclude(id=self.user.id).first()
+        return other.id if other else None
+
 
 class PresenceConsumer(AsyncWebsocketConsumer):
-    """Tracks user online presence globally."""
     async def connect(self):
         self.user = self.scope['user']
         if not self.user.is_authenticated:
@@ -134,3 +153,28 @@ class PresenceConsumer(AsyncWebsocketConsumer):
     def set_online(self, status):
         from accounts.models import User
         User.objects.filter(id=self.user.id).update(is_online=status, last_seen=timezone.now())
+
+
+class UserNotificationConsumer(AsyncWebsocketConsumer):
+    """Notifies home page of new messages in real time."""
+    async def connect(self):
+        self.user = self.scope['user']
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+        self.group_name = f'user_{self.user.id}_notifications'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def receive(self, text_data):
+        pass
+
+    async def new_message_notification(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'new_message_notification',
+            **event
+        }))

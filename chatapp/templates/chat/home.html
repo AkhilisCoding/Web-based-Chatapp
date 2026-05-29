@@ -56,7 +56,7 @@
     <div class="chat-list" id="chatList">
       {% if rooms %}
         {% for item in rooms %}
-        <a href="{% url 'chat:room' item.room.id %}" class="chat-item">
+        <a href="{% url 'chat:room' item.room.id %}" class="chat-item" data-room-id="{{ item.room.id }}">
           <div style="position:relative;">
             <img src="{{ item.other_user.get_avatar_url }}" class="avatar" alt="{{ item.other_user.username }}">
             {% if item.other_user.is_online %}
@@ -66,9 +66,7 @@
           <div class="chat-info">
             <div class="d-flex justify-content-between align-items-center">
               <span class="chat-name">{{ item.other_user.username }}</span>
-              {% if item.last_message %}
-              <span style="font-size:0.7rem;color:var(--text-secondary);">{{ item.last_message.timestamp|time:"H:i" }}</span>
-              {% endif %}
+              <span class="chat-time" style="font-size:0.7rem;color:var(--text-secondary);">{% if item.last_message %}{{ item.last_message.timestamp|time:"H:i" }}{% endif %}</span>
             </div>
             <div class="chat-preview">
               {% if item.last_message %}
@@ -108,5 +106,50 @@ function filterChats(q) {
     el.style.display = name.includes(q.toLowerCase()) ? '' : 'none';
   });
 }
+
+// ─── Real-time home page notifications ───────────────────────
+const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+let notifSocket;
+
+function connectNotifications() {
+  notifSocket = new WebSocket(`${wsProto}://${location.host}/ws/notifications/`);
+  notifSocket.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'new_message_notification') {
+      updateSidebarItem(data);
+    }
+  };
+  notifSocket.onclose = () => setTimeout(connectNotifications, 2000);
+}
+
+function updateSidebarItem(data) {
+  const list = document.getElementById('chatList');
+  let item = list.querySelector(`.chat-item[data-room-id="${data.room_id}"]`);
+
+  if (item) {
+    // update preview text
+    item.querySelector('.chat-preview').textContent = data.message;
+    // update time
+    const timeEl = item.querySelector('.chat-time');
+    if (timeEl) timeEl.textContent = data.timestamp;
+    // bump to top
+    list.prepend(item);
+    // update unread badge
+    let badge = item.querySelector('.unread-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'unread-badge';
+      badge.textContent = '1';
+      item.appendChild(badge);
+    } else {
+      badge.textContent = (parseInt(badge.textContent) || 0) + 1;
+    }
+  } else {
+    // brand new conversation, reload to show it
+    location.reload();
+  }
+}
+
+connectNotifications();
 </script>
 {% endblock %}
