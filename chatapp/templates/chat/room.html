@@ -153,6 +153,7 @@
 
     <div class="messages-area" id="messagesArea">
       {% for msg in messages %}
+      {% if not msg.content|slice:":8" == "__file__" %}
       <div class="msg-row {% if msg.sender == request.user %}mine{% endif %}">
         {% if msg.sender != request.user %}<img src="{{ msg.sender.get_avatar_url }}" class="msg-avatar" alt="">{% endif %}
         <div>
@@ -172,6 +173,7 @@
           <div class="msg-time">{{ msg.timestamp|time:"H:i" }}</div>
         </div>
       </div>
+      {% endif %}
       {% endfor %}
       <div class="msg-row" id="typingRow" style="display:none;">
         <img src="{{ other_user.get_avatar_url }}" class="msg-avatar" alt="">
