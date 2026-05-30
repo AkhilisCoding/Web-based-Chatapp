@@ -29,20 +29,16 @@ def room_view(request, room_id):
         return redirect('chat:home')
     other_user = room.get_other_user(request.user)
     messages = room.messages.select_related('sender').all()
-    # Mark messages as read
     room.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
-    
-    # ADD THIS 👇
     sidebar_rooms = [
         {'room': r, 'other': r.get_other_user(request.user)}
         for r in request.user.rooms.prefetch_related('participants').all()
     ]
-    
     return render(request, 'chat/room.html', {
         'room': room,
         'other_user': other_user,
         'messages': messages,
-        'sidebar_rooms': sidebar_rooms,  # ADD THIS TOO 
+        'sidebar_rooms': sidebar_rooms,
     })
 
 @login_required
@@ -50,7 +46,6 @@ def start_chat_view(request, user_id):
     other_user = get_object_or_404(User, id=user_id)
     if other_user == request.user:
         return redirect('chat:home')
-    # Find existing room or create new one
     room = Room.objects.filter(participants=request.user).filter(participants=other_user).first()
     if not room:
         room = Room.objects.create()
@@ -74,16 +69,15 @@ def upload_file_view(request):
         room = get_object_or_404(Room, id=room_id)
         if not room.participants.filter(id=request.user.id).exists():
             return JsonResponse({'error': 'Unauthorized'}, status=403)
-        
+
         file = request.FILES['file']
         content_type = file.content_type
-        
+
         if content_type.startswith('image/'):
             msg_type = 'image'
         else:
             msg_type = 'file'
 
-        # Upload directly to Cloudinary with correct resource type
         import cloudinary.uploader
         if content_type.startswith('image/'):
             resource_type = 'image'
@@ -99,15 +93,14 @@ def upload_file_view(request):
         )
         file_url = result['secure_url']
 
+        # Save full Cloudinary URL directly
         message = Message.objects.create(
             room=room,
             sender=request.user,
             content=file.name,
             message_type=msg_type,
-            file=file.name,
+            file=file_url,
         )
-        # Update file field with Cloudinary URL
-        Message.objects.filter(id=message.id).update(file=result['public_id'])
 
         return JsonResponse({
             'success': True,

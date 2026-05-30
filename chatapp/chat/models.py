@@ -31,7 +31,7 @@ class Message(models.Model):
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
     content = models.TextField(blank=True)
     message_type = models.CharField(max_length=10, choices=MESSAGE_TYPES, default='text')
-    file = models.FileField(upload_to='chat_files/', null=True, blank=True)
+    file = models.TextField(null=True, blank=True)  # stores full Cloudinary URL
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
