@@ -557,6 +557,22 @@ function toggleCamera() {
   document.getElementById('camIcon').className = isCamOff ? 'bi bi-camera-video-off-fill' : 'bi bi-camera-video-fill';
 }
 
+// make links clickable in existing messages loaded from DB
+function linkify(el) {
+  el.childNodes.forEach(node => {
+    if (node.nodeType === 3) { // text node
+      const text = node.textContent;
+      if (/(https?:\/\/[^\s]+)/.test(text)) {
+        const span = document.createElement('span');
+        span.innerHTML = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;word-break:break-all;">$1</a>');
+        node.replaceWith(span);
+      }
+    }
+  });
+}
+
+document.querySelectorAll('.msg-bubble').forEach(bubble => linkify(bubble));
+
 scrollBottom();
 document.getElementById('msgInput').focus();
 
