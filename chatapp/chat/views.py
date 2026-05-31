@@ -93,7 +93,6 @@ def upload_file_view(request):
         )
         file_url = result['secure_url']
 
-        # Save full Cloudinary URL directly
         message = Message.objects.create(
             room=room,
             sender=request.user,
@@ -111,4 +110,12 @@ def upload_file_view(request):
             'sender_username': request.user.username,
             'timestamp': message.timestamp.strftime('%H:%M'),
         })
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def delete_message_view(request, message_id):
+    if request.method == 'POST':
+        message = get_object_or_404(Message, id=message_id, sender=request.user)
+        message.delete()
+        return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request'}, status=400)

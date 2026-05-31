@@ -9,4 +9,5 @@ urlpatterns = [
     path('start/<int:user_id>/', views.start_chat_view, name='start_chat'),
     path('search/', views.search_users_view, name='search'),
     path('upload/', views.upload_file_view, name='upload_file'),
+    path('delete-message/<int:message_id>/', views.delete_message_view, name='delete_message'),
 ]
