@@ -40,7 +40,26 @@
   .my-avatar { width:34px; height:34px; border-radius:50%; object-fit:cover; border:2px solid var(--accent); }
   .btn-icon { background:none; border:none; color:var(--text-secondary); padding:0.3rem; border-radius:8px; cursor:pointer; transition:all 0.15s; }
   .btn-icon:hover { background:var(--bg-hover); color:var(--text-primary); }
-  @media(max-width:600px) { .sidebar { width:100%; } .main-area { display:none; } }
+  /* Mobile bottom nav */
+  .mobile-bottom-nav {
+    display:none; position:fixed; bottom:0; left:0; right:0;
+    background:var(--bg-secondary); border-top:1px solid var(--border);
+    padding:0.6rem 1.5rem; z-index:500;
+    justify-content:space-between; align-items:center;
+  }
+  .mobile-bottom-nav a, .mobile-bottom-nav span {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    color:var(--text-secondary); text-decoration:none; font-size:0.65rem;
+  }
+  .mobile-bottom-nav i { font-size:1.3rem; }
+  .mobile-bottom-nav .nav-username { font-size:0.7rem; font-weight:500; color:var(--text-primary); max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @media(max-width:600px) {
+    .sidebar { width:100%; }
+    .main-area { display:none; }
+    .sidebar-footer { display:none; }
+    .mobile-bottom-nav { display:flex; }
+    .chat-list { padding-bottom:70px; }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -99,6 +118,27 @@
     </div>
   </div>
 </div>
+
+<!-- Mobile bottom nav -->
+<div class="mobile-bottom-nav">
+  <span>
+    <img src="{{ request.user.get_avatar_url }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);">
+    <span class="nav-username">{{ request.user.username }}</span>
+  </span>
+  <a href="{% url 'chat:search' %}">
+    <i class="bi bi-pencil-square"></i>
+    <span>New Chat</span>
+  </a>
+  <a href="{% url 'accounts:profile' %}">
+    <i class="bi bi-person-circle"></i>
+    <span>Profile</span>
+  </a>
+  <a href="{% url 'accounts:logout' %}">
+    <i class="bi bi-box-arrow-right"></i>
+    <span>Logout</span>
+  </a>
+</div>
+
 <script>
 function filterChats(q) {
   document.querySelectorAll('#chatList .chat-item').forEach(el => {
@@ -107,7 +147,6 @@ function filterChats(q) {
   });
 }
 
-// ─── Real-time home page notifications ───────────────────────
 const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
 let notifSocket;
 
@@ -125,16 +164,11 @@ function connectNotifications() {
 function updateSidebarItem(data) {
   const list = document.getElementById('chatList');
   let item = list.querySelector(`.chat-item[data-room-id="${data.room_id}"]`);
-
   if (item) {
-    // update preview text
     item.querySelector('.chat-preview').textContent = data.message;
-    // update time
     const timeEl = item.querySelector('.chat-time');
     if (timeEl) timeEl.textContent = data.timestamp;
-    // bump to top
     list.prepend(item);
-    // update unread badge
     let badge = item.querySelector('.unread-badge');
     if (!badge) {
       badge = document.createElement('span');
@@ -145,7 +179,6 @@ function updateSidebarItem(data) {
       badge.textContent = (parseInt(badge.textContent) || 0) + 1;
     }
   } else {
-    // brand new conversation, reload to show it
     location.reload();
   }
 }
