@@ -173,12 +173,7 @@
     <div class="messages-area" id="messagesArea">
       {% for msg in messages %}
       {% if not msg.content|slice:":8" == "__file__" %}
-      <div class="msg-row {% if msg.sender == request.user %}mine{% endif %}" data-msg-id="{{ msg.id }}"
-        {% if msg.sender == request.user %}
-        oncontextmenu="showDeleteMenu(event, {{ msg.id }}, this)"
-        ontouchstart="startLongPress(event, {{ msg.id }}, this)"
-        ontouchend="clearLongPress()"
-        {% endif %}>
+      <div class="msg-row {% if msg.sender == request.user %}mine{% endif %}">
         {% if msg.sender != request.user %}<img src="{{ msg.sender.get_avatar_url }}" class="msg-avatar" alt="">{% endif %}
         <div>
           <div class="msg-bubble {% if msg.sender == request.user %}mine{% else %}theirs{% endif %}">
@@ -305,7 +300,6 @@ function connectWS() {
     if (data.type === 'chat_message') appendMessage(data);
     else if (data.type === 'typing_indicator') showTyping(data.is_typing);
     else if (data.type === 'user_status') updateStatus(data.is_online);
-    else if (data.type === 'message_deleted') removeMessage(data.message_id);
   };
   socket.onclose = () => setTimeout(connectWS, 2000);
 }
@@ -353,17 +347,11 @@ function getFileCard(fileUrl, fileName) {
   </a>`;
 }
 
-function removeMessage(msgId) {
-  const el = document.querySelector(`.msg-row[data-msg-id="${msgId}"]`);
-  if (el) el.remove();
-}
-
 function appendMessage(data) {
   const area = document.getElementById('messagesArea');
   const isMine = data.sender_id === USER_ID;
   const div = document.createElement('div');
   div.className = `msg-row${isMine ? ' mine' : ''}`;
-  div.dataset.msgId = data.message_id;
 
   const msg = data.message || '';
   let bubbleContent = '';
@@ -393,16 +381,6 @@ function appendMessage(data) {
       <div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">${bubbleContent}</div>
       <div class="msg-time">${data.timestamp}</div>
     </div>`;
-  if (isMine) {
-    div.addEventListener('contextmenu', (e) => showDeleteMenu(e, data.message_id, div));
-    div.addEventListener('touchstart', (() => {
-      let timer;
-      return (e) => {
-        timer = setTimeout(() => showDeleteMenu(e, data.message_id, div), 500);
-        div.addEventListener('touchend', () => clearTimeout(timer), {once: true});
-      };
-    })());
-  }
   area.insertBefore(div, document.getElementById('typingRow'));
   scrollBottom();
 }
@@ -640,66 +618,5 @@ function connectNotifications() {
 }
 connectNotifications();
 initPeer();
-
-// ─── Delete Message ───────────────────────────────────────────
-let selectedMsgId = null;
-let selectedMsgEl = null;
-let longPressTimer = null;
-
-function startLongPress(e, msgId, el) {
-  longPressTimer = setTimeout(() => showDeleteMenu(e, msgId, el), 500);
-}
-function clearLongPress() {
-  clearTimeout(longPressTimer);
-}
-
-function showDeleteMenu(e, msgId, msgEl) {
-  e.preventDefault();
-  selectedMsgId = msgId;
-  selectedMsgEl = msgEl;
-  const menu = document.getElementById('deleteMenu');
-  menu.style.display = 'block';
-  // position near click/touch
-  let x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-  let y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-  // keep within screen
-  x = Math.min(x, window.innerWidth - 180);
-  y = Math.min(y, window.innerHeight - 100);
-  menu.style.left = x + 'px';
-  menu.style.top = y + 'px';
-}
-
-function closeDeleteMenu() {
-  document.getElementById('deleteMenu').style.display = 'none';
-  selectedMsgId = null;
-  selectedMsgEl = null;
-}
-
-function confirmDelete() {
-  if (!selectedMsgId) return;
-  closeDeleteMenu();
-  if (socket && socket.readyState === 1) {
-    socket.send(JSON.stringify({ type: 'delete_message', message_id: selectedMsgId }));
-  }
-}
-
-// hide menu on outside click
-document.addEventListener('click', (e) => {
-  const menu = document.getElementById('deleteMenu');
-  if (menu && !menu.contains(e.target)) closeDeleteMenu();
-});
-
-connectNotifications();
-initPeer();
 </script>
 {% endblock %}
-
-<!-- Delete context menu -->
-<div id="deleteMenu" style="display:none;position:fixed;z-index:2000;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:0.3rem 0;box-shadow:0 4px 20px rgba(0,0,0,0.4);min-width:160px;">
-  <button onclick="confirmDelete()" style="width:100%;background:none;border:none;color:#ff5252;padding:0.6rem 1rem;text-align:left;cursor:pointer;font-size:0.88rem;display:flex;align-items:center;gap:8px;">
-    <i class="bi bi-trash"></i> Delete for Everyone
-  </button>
-  <button onclick="closeDeleteMenu()" style="width:100%;background:none;border:none;color:var(--text-secondary);padding:0.6rem 1rem;text-align:left;cursor:pointer;font-size:0.88rem;display:flex;align-items:center;gap:8px;">
-    <i class="bi bi-x"></i> Cancel
-  </button>
-</div>

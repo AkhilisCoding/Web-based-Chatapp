@@ -53,6 +53,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'timestamp': message.timestamp.strftime('%H:%M'),
             })
 
+            # 👇 notify the other user's home page
             other_user_id = await self.get_other_user_id()
             if other_user_id:
                 await self.channel_layer.group_send(
@@ -66,16 +67,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'timestamp': message.timestamp.strftime('%H:%M'),
                     }
                 )
-
-        elif msg_type == 'delete_message':
-            message_id = data.get('message_id')
-            success = await self.delete_message(message_id)
-            if success:
-                await self.channel_layer.group_send(self.room_group_name, {
-                    'type': 'message_deleted',
-                    'message_id': message_id,
-                    'deleted_by': self.user.id,
-                })
 
         elif msg_type in ('call_offer', 'call_answer', 'ice_candidate', 'call_end', 'call_rejected'):
             await self.channel_layer.group_send(self.room_group_name, {
@@ -100,9 +91,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({'type': 'chat_message', **event}))
 
-    async def message_deleted(self, event):
-        await self.send(text_data=json.dumps({'type': 'message_deleted', **event}))
-
     async def webrtc_signal(self, event):
         if event.get('sender_id') != self.user.id:
             await self.send(text_data=json.dumps({'type': 'webrtc_signal', **event}))
@@ -119,16 +107,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         from .models import Room, Message
         room = Room.objects.get(id=self.room_id)
         return Message.objects.create(room=room, sender=self.user, content=content, message_type='text')
-
-    @database_sync_to_async
-    def delete_message(self, message_id):
-        from .models import Message
-        try:
-            msg = Message.objects.get(id=message_id, sender=self.user)
-            msg.delete()
-            return True
-        except Message.DoesNotExist:
-            return False
 
     @database_sync_to_async
     def set_user_online(self, status):
