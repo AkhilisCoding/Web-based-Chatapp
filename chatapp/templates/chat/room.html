@@ -518,10 +518,6 @@ async function startCall(type) {
     localStream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
     document.getElementById('localVideo').srcObject = localStream;
     showOverlay('Calling {{ other_user.username }}...');
-    // notify other user via WebSocket so they see caller name
-    if (socket && socket.readyState === 1) {
-      socket.send(JSON.stringify({ type: 'call_notify' }));
-    }
     currentCall = peer.call(String(OTHER_USER_ID), localStream);
     currentCall.on('stream', (remoteStream) => {
       document.getElementById('remoteVideo').srcObject = remoteStream;
@@ -603,12 +599,6 @@ function connectNotifications() {
   notifSocket.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.type === 'new_message_notification' && data.room_id !== ROOM_ID) {
-      // existing sidebar update code...
-    } else if (data.type === 'incoming_call_notification') {
-      document.getElementById('callerName').textContent = data.caller_name;
-      document.getElementById('callTypeLabel').textContent = 'Incoming call...';
-      document.getElementById('incomingCall').classList.add('active');
-    }
       const sidebarLink = document.querySelector(`.chat-item[href="/chat/room/${data.room_id}/"]`);
       if (sidebarLink) {
         const preview = sidebarLink.querySelector('.s-preview');
