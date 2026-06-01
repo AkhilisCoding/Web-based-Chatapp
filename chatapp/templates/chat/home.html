@@ -201,6 +201,11 @@ function connectNotifications() {
   notifSocket.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.type === 'new_message_notification') updateSidebarItem(data);
+    else if (data.type === 'incoming_call_notification') {
+      document.getElementById('callerName').textContent = data.caller_name;
+      document.getElementById('callTypeLabel').textContent = 'Incoming call...';
+      document.getElementById('incomingCall').classList.add('active');
+    }
   };
   notifSocket.onclose = () => setTimeout(connectNotifications, 2000);
 }

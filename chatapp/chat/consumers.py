@@ -53,7 +53,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'timestamp': message.timestamp.strftime('%H:%M'),
             })
 
-            # 👇 notify the other user's home page
             other_user_id = await self.get_other_user_id()
             if other_user_id:
                 await self.channel_layer.group_send(
@@ -65,6 +64,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'sender_avatar': self.user.get_avatar_url(),
                         'message': content,
                         'timestamp': message.timestamp.strftime('%H:%M'),
+                    }
+                )
+
+        elif msg_type == 'call_notify':
+            # Notify the other user who is calling before PeerJS connects
+            other_user_id = await self.get_other_user_id()
+            if other_user_id:
+                await self.channel_layer.group_send(
+                    f'user_{other_user_id}_notifications',
+                    {
+                        'type': 'incoming_call_notification',
+                        'caller_id': self.user.id,
+                        'caller_name': self.user.username,
+                        'caller_avatar': self.user.get_avatar_url(),
                     }
                 )
 
@@ -156,7 +169,7 @@ class PresenceConsumer(AsyncWebsocketConsumer):
 
 
 class UserNotificationConsumer(AsyncWebsocketConsumer):
-    """Notifies home page of new messages in real time."""
+    """Notifies home page of new messages and calls in real time."""
     async def connect(self):
         self.user = self.scope['user']
         if not self.user.is_authenticated:
@@ -176,5 +189,11 @@ class UserNotificationConsumer(AsyncWebsocketConsumer):
     async def new_message_notification(self, event):
         await self.send(text_data=json.dumps({
             'type': 'new_message_notification',
+            **event
+        }))
+
+    async def incoming_call_notification(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'incoming_call_notification',
             **event
         }))
