@@ -53,12 +53,28 @@
   }
   .mobile-bottom-nav i { font-size:1.3rem; }
   .mobile-bottom-nav .nav-username { font-size:0.7rem; font-weight:500; color:var(--text-primary); max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Incoming call popup */
+  .incoming-call { position:fixed; top:1.5rem; right:1.5rem; z-index:1100; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:1.2rem 1.5rem; min-width:260px; display:none; box-shadow:0 8px 32px rgba(0,0,0,0.5); animation:slideIn 0.3s ease; }
+  .incoming-call.active { display:block; }
+  @keyframes slideIn { from{transform:translateX(120%)} to{transform:translateX(0)} }
+  /* Call overlay */
+  .call-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:1000; display:none; flex-direction:column; align-items:center; justify-content:center; }
+  .call-overlay.active { display:flex; }
+  .remote-video { width:min(800px,90vw); height:min(500px,60vh); background:#111; border-radius:16px; object-fit:cover; }
+  .local-video { position:fixed; bottom:110px; right:24px; width:160px; height:110px; border-radius:12px; object-fit:cover; border:2px solid var(--accent); background:#111; }
+  .call-controls { position:fixed; bottom:28px; display:flex; gap:1rem; }
+  .call-ctrl-btn { width:54px; height:54px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; font-size:1.2rem; cursor:pointer; transition:all 0.2s; }
+  .call-ctrl-btn.end { background:#ff5252; color:#fff; }
+  .call-ctrl-btn.mute { background:var(--bg-card); color:var(--text-primary); }
+  .call-ctrl-btn:hover { transform:scale(1.1); }
+  .call-status-text { color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem; }
   @media(max-width:600px) {
     .sidebar { width:100%; }
     .main-area { display:none; }
     .sidebar-footer { display:none; }
     .mobile-bottom-nav { display:flex; }
     .chat-list { padding-bottom:70px; }
+    .incoming-call { top:auto; bottom:5rem; right:0.5rem; left:0.5rem; min-width:unset; }
   }
 </style>
 {% endblock %}
@@ -139,7 +155,38 @@
   </a>
 </div>
 
+<!-- Incoming Call Popup -->
+<div class="incoming-call" id="incomingCall">
+  <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1rem;">
+    <div id="callerAvatar" style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff;">?</div>
+    <div>
+      <div id="callerName" style="font-weight:600;font-size:0.9rem;">Unknown</div>
+      <div style="color:var(--text-secondary);font-size:0.8rem;" id="callTypeLabel">Incoming call...</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.8rem;">
+    <button onclick="rejectCall()" style="flex:1;background:#ff525220;color:#ff5252;border:1px solid #ff525240;border-radius:10px;padding:0.5rem;cursor:pointer;font-size:0.85rem;"><i class="bi bi-x-lg"></i> Decline</button>
+    <button onclick="acceptCall()" style="flex:1;background:rgba(0,230,118,0.15);color:#00e676;border:1px solid rgba(0,230,118,0.3);border-radius:10px;padding:0.5rem;cursor:pointer;font-size:0.85rem;"><i class="bi bi-telephone-fill"></i> Answer</button>
+  </div>
+</div>
+
+<!-- Call Overlay -->
+<div class="call-overlay" id="callOverlay">
+  <div class="call-status-text" id="callStatus">Connecting...</div>
+  <video class="remote-video" id="remoteVideo" autoplay playsinline></video>
+  <video class="local-video" id="localVideo" autoplay playsinline muted></video>
+  <div class="call-controls">
+    <button class="call-ctrl-btn mute" onclick="toggleMute()"><i class="bi bi-mic-fill" id="muteIcon"></i></button>
+    <button class="call-ctrl-btn end" onclick="endCall()"><i class="bi bi-telephone-x-fill"></i></button>
+    <button class="call-ctrl-btn mute" onclick="toggleCamera()"><i class="bi bi-camera-video-fill" id="camIcon"></i></button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
+const USER_ID = {{ request.user.id }};
+const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+
 function filterChats(q) {
   document.querySelectorAll('#chatList .chat-item').forEach(el => {
     const name = el.querySelector('.chat-name').textContent.toLowerCase();
@@ -147,16 +194,13 @@ function filterChats(q) {
   });
 }
 
-const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+// ─── Real-time notifications ──────────────────────────────────
 let notifSocket;
-
 function connectNotifications() {
   notifSocket = new WebSocket(`${wsProto}://${location.host}/ws/notifications/`);
   notifSocket.onmessage = (e) => {
     const data = JSON.parse(e.data);
-    if (data.type === 'new_message_notification') {
-      updateSidebarItem(data);
-    }
+    if (data.type === 'new_message_notification') updateSidebarItem(data);
   };
   notifSocket.onclose = () => setTimeout(connectNotifications, 2000);
 }
@@ -184,5 +228,73 @@ function updateSidebarItem(data) {
 }
 
 connectNotifications();
+
+// ─── PeerJS Global Call Listener ─────────────────────────────
+let peer = null, localStream = null, currentCall = null, pendingCall = null;
+let isMuted = false, isCamOff = false;
+
+function initPeer() {
+  peer = new Peer(String(USER_ID), {
+    host: '0.peerjs.com', port: 443, path: '/', secure: true, debug: 0,
+    config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
+  });
+  peer.on('open', (id) => console.log('PeerJS ready on home, ID:', id));
+  peer.on('error', (err) => { console.warn('PeerJS error:', err.type); setTimeout(initPeer, 3000); });
+  peer.on('call', (call) => {
+    pendingCall = call;
+    // show caller name from peer id (user id)
+    document.getElementById('callerName').textContent = 'Incoming Call';
+    document.getElementById('callTypeLabel').textContent = 'Incoming call...';
+    document.getElementById('incomingCall').classList.add('active');
+  });
+}
+
+async function acceptCall() {
+  document.getElementById('incomingCall').classList.remove('active');
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById('localVideo').srcObject = localStream;
+    document.getElementById('callStatus').textContent = 'Connected';
+    document.getElementById('callOverlay').classList.add('active');
+    pendingCall.answer(localStream);
+    currentCall = pendingCall;
+    currentCall.on('stream', (remoteStream) => {
+      document.getElementById('remoteVideo').srcObject = remoteStream;
+    });
+    currentCall.on('close', cleanupCall);
+  } catch(e) { alert('Could not access camera/microphone.'); }
+}
+
+function rejectCall() {
+  document.getElementById('incomingCall').classList.remove('active');
+  if (pendingCall) pendingCall.close();
+  pendingCall = null;
+}
+
+function endCall() { if (currentCall) currentCall.close(); cleanupCall(); }
+
+function cleanupCall() {
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  localStream = null; currentCall = null; pendingCall = null;
+  document.getElementById('callOverlay').classList.remove('active');
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('localVideo').srcObject = null;
+}
+
+function toggleMute() {
+  if (!localStream) return;
+  isMuted = !isMuted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+  document.getElementById('muteIcon').className = isMuted ? 'bi bi-mic-mute-fill' : 'bi bi-mic-fill';
+}
+
+function toggleCamera() {
+  if (!localStream) return;
+  isCamOff = !isCamOff;
+  localStream.getVideoTracks().forEach(t => t.enabled = !isCamOff);
+  document.getElementById('camIcon').className = isCamOff ? 'bi bi-camera-video-off-fill' : 'bi bi-camera-video-fill';
+}
+
+initPeer();
 </script>
 {% endblock %}
