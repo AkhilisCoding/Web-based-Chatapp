@@ -99,6 +99,7 @@
     background:var(--bg-secondary); border-top:1px solid var(--border);
     padding:0.5rem 1rem; z-index:500;
     justify-content:space-around; align-items:center;
+    height:58px;
   }
   .mobile-bottom-nav a {
     display:flex; flex-direction:column; align-items:center; gap:2px;
@@ -108,13 +109,13 @@
   @media(max-width:700px) {
     .sidebar { display:none; }
     .call-btns { display:none !important; }
-    .mobile-call-bar { display:flex !important; }
+    .mobile-call-bar { display:flex !important; bottom:68px; }
     .mobile-bottom-nav { display:flex !important; }
     .chat-header { padding:0.6rem 0.8rem; gap:0.6rem; }
     .header-name { font-size:0.88rem; }
     .header-status { font-size:0.7rem; }
     .messages-area { padding:0.8rem; padding-bottom:0.5rem; }
-    .input-area { padding:0.5rem 0.8rem; gap:0.4rem; margin-bottom:56px; }
+    .input-area { padding:0.5rem 0.8rem; gap:0.4rem; padding-bottom:calc(0.5rem + 58px); }
     .msg-row > div { max-width:80%; }
     .msg-bubble { font-size:0.85rem; }
     .msg-image { max-width:180px; }
