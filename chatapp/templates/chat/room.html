@@ -507,8 +507,9 @@ function initPeer() {
   peer.on('error', (err) => { console.warn('PeerJS error:', err.type, err.message); setTimeout(initPeer, 3000); });
   peer.on('call', (call) => {
     pendingCall = call;
+    const callerName = call.metadata?.caller_name || 'Someone';
     document.getElementById('incomingCall').classList.add('active');
-    document.getElementById('callTypeLabel').textContent = 'Incoming call...';
+    document.getElementById('callTypeLabel').textContent = `${callerName} is calling...`;
   });
 }
 
@@ -518,7 +519,7 @@ async function startCall(type) {
     localStream = await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
     document.getElementById('localVideo').srcObject = localStream;
     showOverlay('Calling {{ other_user.username }}...');
-    currentCall = peer.call(String(OTHER_USER_ID), localStream);
+    currentCall = peer.call(String(OTHER_USER_ID), localStream, { metadata: { caller_name: '{{ request.user.username }}' } });
     currentCall.on('stream', (remoteStream) => {
       document.getElementById('remoteVideo').srcObject = remoteStream;
       document.getElementById('callStatus').textContent = '{{ other_user.username }}';

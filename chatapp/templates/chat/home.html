@@ -242,9 +242,9 @@ function initPeer() {
   peer.on('error', (err) => { console.warn('PeerJS error:', err.type); setTimeout(initPeer, 3000); });
   peer.on('call', (call) => {
     pendingCall = call;
-    // show caller name from peer id (user id)
-    document.getElementById('callerName').textContent = 'Incoming Call';
-    document.getElementById('callTypeLabel').textContent = 'Incoming call...';
+    const callerName = call.metadata?.caller_name || 'Someone';
+    document.getElementById('callerName').textContent = callerName;
+    document.getElementById('callTypeLabel').textContent = `${callerName} is calling...`;
     document.getElementById('incomingCall').classList.add('active');
   });
 }
