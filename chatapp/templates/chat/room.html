@@ -261,9 +261,9 @@
 
 <div class="incoming-call" id="incomingCall">
   <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1rem;">
-    <img src="{{ other_user.get_avatar_url }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;">
+    <div style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff;" id="callerInitial">?</div>
     <div>
-      <div style="font-weight:600;font-size:0.9rem;">{{ other_user.username }}</div>
+      <div style="font-weight:600;font-size:0.9rem;" id="callerName">Someone</div>
       <div style="color:var(--text-secondary);font-size:0.8rem;" id="callTypeLabel">Incoming call...</div>
     </div>
   </div>
@@ -508,6 +508,8 @@ function initPeer() {
   peer.on('call', (call) => {
     pendingCall = call;
     const callerName = call.metadata?.caller_name || 'Someone';
+    document.getElementById('callerName').textContent = callerName;
+    document.getElementById('callerInitial').textContent = callerName.charAt(0).toUpperCase();
     document.getElementById('incomingCall').classList.add('active');
     document.getElementById('callTypeLabel').textContent = `${callerName} is calling...`;
   });
